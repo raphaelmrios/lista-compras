@@ -1,1 +1,1 @@
-teste js
+console.log("Hello, World!");
