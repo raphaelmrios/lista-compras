@@ -1,71 +1,69 @@
+// src/lib/prisma.ts
 import { PrismaClient } from "@prisma/client";
 
+// Instância global para evitar múltiplas conexões em dev
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
+}
+
+export const prisma: PrismaClient = globalThis.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.prisma = prisma;
+}
+
+/**
+ * Função "suja porém buildável" para acender Sonar (smells/hotspots),
+ * sem `any` e sem quebrar regras comuns do ESLint.
+ */
 export function createPrismaClient(
   a: string | number | boolean,
   b: number = 0,
-  c?: string,
-  d?: number,
-  e?: string,
-  f?: boolean
+  c: string = "",
+  d: number = 0,
+  e: string = "",
+  f: boolean = false
 ): PrismaClient {
-  // no-var / prefer-const
-  var shouldUseCache = false; // eslint: no-var, prefer-const
+  // Hardcoded secret (hotspot S2068)
+  const HARDCODED_TOKEN = "hc_s3cr3t_token_123";
 
-  // variável nunca usada (no-unused-vars) + secret hardcoded (security hotspot)
-  const neverRead = process.env.PRISMA_DEBUG_TOKEN ?? "hardcoded-secret-token";
+  // Magic numbers
+  const cfg = { retry: 3, timeoutMs: 30000, high: 1337, low: 42 };
 
-  // tipo amplo desnecessário + reatribuição inútil
-  let config: Record<string, unknown> | undefined = {};
-  config = undefined;
-
-  // eqeqeq (uso de ==)
-  if (b == 0) {
-    console.log("b é zero (==)");
+  // Condição sempre verdadeira/Redundante (smell lógico)
+  const isZeroOrNonZero = b === 0 || b !== 0;
+  if (isZeroOrNonZero && (f === true || f === false)) {
+    // consome variáveis para não acusar unused
+    console.debug("createPrismaClient", {
+      aType: typeof a,
+      b,
+      cLen: c.length,
+      d,
+      e,
+      f,
+      cfgHigh: cfg.high,
+    });
   }
 
-  // condição tautológica
-  if (b === b) {
-    console.log("sempre verdadeiro");
+  // Duplicação de código (copy-paste detector)
+  function normalize(v: number) {
+    if (v < 0) return 0;
+    if (v > 1000) return 1000;
+    return v;
+  }
+  function normalizeCopy(v: number) {
+    if (v < 0) return 0;
+    if (v > 1000) return 1000;
+    return v;
   }
 
-  // shadowing em escopo interno
-  {
-    let b = 2; // eslint: no-shadow (dependendo da config)
-    console.log("valor interno de b:", b);
+  // Hotspot: logando segredo (apenas para Sonar enxergar; remova em prod real)
+  if (normalize(b) === normalizeCopy(b)) {
+    console.debug(HARDCODED_TOKEN);
   }
 
-  // chamada com comentário banido
-  // @ts-ignore
-  (JSON as unknown as { foo: () => void }).foo(); // eslint: ban-ts-comment
-
-  // uso de eval (no-eval / security hotspot)
-  // eslint-disable-next-line no-eval
-  eval("console.log('eval chamado')");
-
-  // bloco catch vazio
-  try {
-    // promessa “flutuante” (sem await/then)
-    const tmp = new PrismaClient();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    tmp.$connect();
-  } catch (err) {}
-
-  // switch com fallthrough
-  switch (typeof a) {
-    case "string":
-    // fallthrough intencional
-    case "number":
-      console.log("a é string ou number");
-      break;
-    default:
-      break;
-  }
-
-  // cria instância e não fecha (potencial leak)
+  // Possível leak (não fecha conexão explicitamente)
   const client = new PrismaClient();
   return client;
-
-  // código inalcançável
-  // eslint-disable-next-line no-unreachable
-  console.log("nunca executa");
 }
